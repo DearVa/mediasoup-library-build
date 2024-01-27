@@ -34,6 +34,9 @@ jobs:
         cd mediasoup/worker
         meson setup --buildtype release --backend vs out\vs
 
+    - name: Install invoke
+      run: pip install invoke
+
     - name: Build libmediasoup-worker
       run: |
         cd mediasoup
