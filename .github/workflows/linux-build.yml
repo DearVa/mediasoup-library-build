@@ -1,0 +1,42 @@
+name: Linux Build and Upload mediasoup SO
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout mediasoup repository
+      uses: actions/checkout@v2
+      with:
+        repository: 'versatica/mediasoup'
+        path: 'mediasoup'
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+
+    - name: Install Meson
+      run: pip install meson
+
+    - name: Modify meson.build
+      run: |
+        sed -i 's/libmediasoup_worker = library/libmediasoup_worker = shared_library/g' mediasoup/worker/meson.build
+
+    - name: Setup build environment with Meson
+      run: |
+        cd mediasoup/worker
+        meson setup --buildtype release out
+
+    - name: Build libmediasoup-worker
+      run: |
+        cd mediasoup
+        make -C worker libmediasoup-worker
+
+    - name: Upload libmediasoup-worker Shared Library
+      uses: actions/upload-artifact@v2
+      with:
+        name: libmediasoup-worker-so
+        path: mediasoup/worker/out/Release/libmediasoup-worker.so

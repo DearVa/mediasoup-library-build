@@ -1,0 +1,46 @@
+name: Build and Upload mediasoup DLL
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout mediasoup repository
+      uses: actions/checkout@v2
+      with:
+        repository: 'versatica/mediasoup'
+        path: 'mediasoup'
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+
+    - name: Install Meson
+      run: pip install meson
+
+    - name: Modify meson.build
+      run: |
+        (Get-Content mediasoup/worker/meson.build).Replace('libmediasoup_worker = library', 'libmediasoup_worker = shared_library') | Set-Content mediasoup/worker/meson.build
+
+    - name: Modify tasks.py for Windows
+      run: |
+        (Get-Content mediasoup/worker/tasks.py).Replace('PTY_SUPPORTED = sys.stdout.isatty();', 'PTY_SUPPORTED = False;') | Set-Content mediasoup/worker/tasks.py
+
+    - name: Setup build environment with Meson
+      run: |
+        cd mediasoup/worker
+        meson setup --buildtype release --backend vs out\vs
+
+    - name: Build libmediasoup-worker
+      run: |
+        cd mediasoup
+        make -C worker libmediasoup-worker
+
+    - name: Upload libmediasoup-worker DLL
+      uses: actions/upload-artifact@v2
+      with:
+        name: libmediasoup-worker-dll
+        path: mediasoup/worker/out/Release/libmediasoup-worker.dll
